@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?> 
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ImportGroup Label="PropertySheets" />
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup />
+  <ItemDefinitionGroup>
+    <ClCompile>
+      <AdditionalIncludeDirectories>$(DIRECTOUTPUT_HOME);$(SIMCONNECT_HOME)\inc;D:\Tools\Boost-1_59_0\include\boost-1_59;C:\FS\FSX\PMDG\PMDG 737 NGX\SDK;C:\FS\FSX\PMDG\PMDG 777X\SDK;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
+  </ItemDefinitionGroup>
+  <ItemGroup />
+</Project>

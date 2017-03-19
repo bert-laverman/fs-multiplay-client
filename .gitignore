@@ -27,3 +27,12 @@
 *.exe
 *.out
 *.app
+FSMultiplayClient/Debug/
+FSMultiplayClient/FSMultiplayClient.VC.db
+FSMultiplayClient/packages/
+LibMultiplay/Debug/
+LibFsx/Debug/
+LibRakis/Debug/
+LibService/Debug/
+LibAI/Debug/
+FSMultiplayClient/ipch/
