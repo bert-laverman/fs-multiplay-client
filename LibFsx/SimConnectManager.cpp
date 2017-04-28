@@ -282,6 +282,35 @@ void SimConnectManager::stopRunning()
 }
 
 
+/*static*/ void SimConnectManager::logAIObjectAction(SIMCONNECT_RECV_EVENT_OBJECT_ADDREMOVE *obj)
+{
+	const char* verb = (obj->uEventID == EVENT_OBJECT_ADDED) ? "added" : "removed";
+
+	switch (obj->eObjType) {
+	case SIMCONNECT_SIMOBJECT_TYPE_USER:
+		log_.debug("scDispatchProc(): The user's aircraft was ", verb, ". (ID=", obj->dwData, ")");
+		break;
+	case SIMCONNECT_SIMOBJECT_TYPE_ALL:
+		log_.debug("scDispatchProc(): Some kind of AI object was ", verb, ". (ID=", obj->dwData, ")");
+		break;
+	case SIMCONNECT_SIMOBJECT_TYPE_AIRCRAFT:
+		log_.debug("scDispatchProc(): An AI aircraft was ", verb, ". (ID=", obj->dwData, ")");
+		break;
+	case SIMCONNECT_SIMOBJECT_TYPE_HELICOPTER:
+		log_.debug("scDispatchProc(): An AI helicopter was ", verb, ". (ID=", obj->dwData, ")");
+		break;
+	case SIMCONNECT_SIMOBJECT_TYPE_BOAT:
+		log_.debug("scDispatchProc(): An AI boat was ", verb, ". (ID=", obj->dwData, ")");
+		break;
+	case SIMCONNECT_SIMOBJECT_TYPE_GROUND:
+		log_.debug("scDispatchProc(): An AI groundvehicle was ", verb, ". (ID=", obj->dwData, ")");
+		break;
+	default:
+		log_.debug("scDispatchProc(): An unknown AI type was ", verb, ". (type=", obj->eObjType, ", ID=", obj->dwData, ")");
+		break;
+	}
+}
+
 /*static*/ void __stdcall SimConnectManager::scDispatchProc(SIMCONNECT_RECV* pData, DWORD cbData, void *pContext)
 {
 	SimConnectManager* pThis = 0;
@@ -532,40 +561,10 @@ void SimConnectManager::stopRunning()
 	{
 		log_.trace("scDispatchProc(): Object added or removed");
 		SIMCONNECT_RECV_EVENT_OBJECT_ADDREMOVE *obj = static_cast<SIMCONNECT_RECV_EVENT_OBJECT_ADDREMOVE*>(pData);
-//		const char* verb;
-		SimConnectEvent evt;
-		if (obj->uEventID == EVENT_OBJECT_ADDED) {
-//			verb = "added";
-			evt = SCE_OBJECTADDED;
-		}
-		else {
-//			verb = "removed";
-			evt = SCE_OBJECTREMOVED;
-		}
 
-		//switch (obj->eObjType) {
-		//case SIMCONNECT_SIMOBJECT_TYPE_USER:
-		//	log_.debug("scDispatchProc(): The user's aircraft was ", verb, ". (ID=", obj->dwData, ")");
-		//	break;
-		//case SIMCONNECT_SIMOBJECT_TYPE_ALL:
-		//	log_.debug("scDispatchProc(): Some kind of AI object was ", verb, ". (ID=", obj->dwData, ")");
-		//	break;
-		//case SIMCONNECT_SIMOBJECT_TYPE_AIRCRAFT:
-		//	log_.debug("scDispatchProc(): An AI aircraft was ", verb, ". (ID=", obj->dwData, ")");
-		//	break;
-		//case SIMCONNECT_SIMOBJECT_TYPE_HELICOPTER:
-		//	log_.debug("scDispatchProc(): An AI helicopter was ", verb, ". (ID=", obj->dwData, ")");
-		//	break;
-		//case SIMCONNECT_SIMOBJECT_TYPE_BOAT:
-		//	log_.debug("scDispatchProc(): An AI boat was ", verb, ". (ID=", obj->dwData, ")");
-		//	break;
-		//case SIMCONNECT_SIMOBJECT_TYPE_GROUND:
-		//	log_.debug("scDispatchProc(): An AI groundvehicle was ", verb, ". (ID=", obj->dwData, ")");
-		//	break;
-		//default:
-		//	log_.debug("scDispatchProc(): An unknown AI type was ", verb, ". (type=", obj->eObjType, ", ID=", obj->dwData, ")");
-		//	break;
-		//}
+		logAIObjectAction(obj);
+
+		SimConnectEvent evt = (obj->uEventID == EVENT_OBJECT_ADDED) ? SCE_OBJECTADDED : SCE_OBJECTREMOVED;
 		pThis->fireSimConnectEvent(evt, obj->dwData);
 	}
 	break;
@@ -684,6 +683,7 @@ void SimConnectManager::checkDispatch()
 		log_.error("checkDispatch(): CallDispatch failed (hr=", hr, "), closing connection");
 
 		disconnect();
+		fireSimConnectEvent(SCE_DISCONNECT);
 	}
 }
 
@@ -714,10 +714,7 @@ void SimConnectManager::fireSimConnectEvent(SimConnectEvent evt, DWORD data, con
     int nr = 0;
     for (SimConnectEventListeners::iterator i = sceListeners_.begin(); i != sceListeners_.end(); i++) {
 		log_.trace("fireSimConnectEvent(): Calling handler #", ++nr, " (evt=", evt, ")");
-        if ((*i).operator()(evt, data, arg)) {
-			log_.trace("fireSimConnectEvent(): Handler #", ++nr, " returned true, not notifying others");
-            break;
-        }
+        (*i).operator()(evt, data, arg);
     }
 
 	log_.trace("fireSimConnectEvent(): Done");

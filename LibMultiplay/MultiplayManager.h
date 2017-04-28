@@ -159,7 +159,20 @@ namespace fsx {
 
 		bool isApiConnected() const { return apiConnected_; }
 		bool isWsConnected() const { return wsConnected_; }
+		const std::wstring& getServerUrl() const { return serverUrl_; }
+		void setServerUrl(const std::wstring& serverUrl) { serverUrl_ = serverUrl; }
+		const std::wstring& getServerWsUrl() const { return serverWsUrl_; }
+		void setServerWsUrl(const std::wstring& serverWsUrl) { serverWsUrl_ = serverWsUrl; }
+		const std::wstring& getUsername() const{ return username_; }
+		void setUsername(const std::wstring& username) { username_ = username; }
+		const std::wstring& getPassword() const{ return password_; }
+		void setPassword(const std::wstring& password) { password_ = password; }
+		const std::wstring& getSession() const{ return session_; }
+		void setSession(const std::wstring& session) { session_ = session; }
 		const std::wstring& getCallsign() const { return callsign_; }
+		void setCallsign(const std::wstring& callsign) { callsign_ = callsign; }
+		bool isCallsignOverride() const { return forceCallsign_; }
+		void setCallsignOverride(bool forceCallsign) { forceCallsign_ = forceCallsign; }
 
 		// AIManager wants these
 		const FsxData& getLocationData() const { return aircraftLocationData_; }

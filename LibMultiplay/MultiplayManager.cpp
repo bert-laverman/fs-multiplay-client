@@ -115,7 +115,6 @@ void MultiplayManager::doStart()
 			break;
 
 		}
-		return false;
 	});
 
 	auto multiplayTree = SettingsManager::instance().getTree("multiplay");

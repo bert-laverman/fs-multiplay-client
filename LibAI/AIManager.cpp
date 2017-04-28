@@ -139,7 +139,6 @@ void AIManager::doStart()
 			break;
 
 		}
-		return false;
 	});
 	log_.debug("doStart(): Done");
 }

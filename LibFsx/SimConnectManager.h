@@ -28,7 +28,7 @@ namespace fsx {
 class SimConnectManager
 {
 public: // Types and constants
-    typedef std::function<bool(SimConnectEvent,DWORD,const char*)> SimConnectEventHandler;
+    typedef std::function<void(SimConnectEvent,DWORD,const char*)> SimConnectEventHandler;
     typedef std::vector<SimConnectEventHandler>  SimConnectEventListeners;
 
     typedef std::packaged_task<SIMCONNECT_DATA_REQUEST_ID(void)>        Requestor;
@@ -98,6 +98,7 @@ private: // Members
 
     void requestSystemStateOnce(SimConnectSystemStateEvent evt, SystemStateCallback callback);
 
+	static void logAIObjectAction(SIMCONNECT_RECV_EVENT_OBJECT_ADDREMOVE *obj);
     static void __stdcall scDispatchProc(SIMCONNECT_RECV* pData, DWORD cbData, void *pContext);
 
     static DWORD lastSendId(HANDLE fsxHdl);
