@@ -239,6 +239,8 @@ void SimConnectManager::run()
 		connectLoop();
 
 		log_.trace("run(): Waiting for work");
+		unsigned heartBeat = 2000;
+		bool nothingToDo = true;
 		while (isRunning() && isConnected()) {
             if (!isStopped()) { // Only run tasks while FSX is not in stopped mode
                 log_.trace("run(): Checking for tasks");
@@ -246,6 +248,7 @@ void SimConnectManager::run()
                 {
                     unique_lock<mutex> reqLck(requestLock_);
                     if (!requests_.empty()) {
+						nothingToDo = false;
                         log_.trace("run(): Getting task");
                         work = move(requests_.front());
                         requests_.pop_front();
@@ -261,6 +264,13 @@ void SimConnectManager::run()
 
             if (isConnected()) {
                 this_thread::sleep_for(chrono::milliseconds(50));
+				if (--heartBeat == 0) {
+					if (nothingToDo) {
+						log_.warn("run(): Been waiting for (at least) 10 seconds with nothing to do...");
+					}
+					heartBeat = 2000;
+					nothingToDo = true;
+				}
             }
 		}
 		log_.trace("run(): Not connected or not running, done for now");
@@ -303,7 +313,7 @@ void SimConnectManager::stopRunning()
 		log_.debug("scDispatchProc(): An AI boat was ", verb, ". (ID=", obj->dwData, ")");
 		break;
 	case SIMCONNECT_SIMOBJECT_TYPE_GROUND:
-		log_.debug("scDispatchProc(): An AI groundvehicle was ", verb, ". (ID=", obj->dwData, ")");
+		log_.trace("scDispatchProc(): An AI groundvehicle was ", verb, ". (ID=", obj->dwData, ")");
 		break;
 	default:
 		log_.debug("scDispatchProc(): An unknown AI type was ", verb, ". (type=", obj->eObjType, ", ID=", obj->dwData, ")");
@@ -709,7 +719,10 @@ void SimConnectManager::fireSimConnectEvent(SimConnectEvent evt, DWORD data, con
 {
 	log_.trace("fireSimConnectEvent()");
 	if (evt == SCE_START) {
-		log_.debug("fireSimConnectEvent(): ", sceListeners_.size(), "event handler(s)");
+		log_.trace("fireSimConnectEvent(): ", sceListeners_.size(), "event handler(s)");
+	}
+	else if (evt == SCE_AIRCRAFTLOADED) {
+		log_.debug("fireSimConnectEvent(): Aircraft data loaded");
 	}
     int nr = 0;
     for (SimConnectEventListeners::iterator i = sceListeners_.begin(); i != sceListeners_.end(); i++) {
@@ -1756,7 +1769,11 @@ struct AircraftDataOverlay {
 
 void SimConnectManager::requestUserAircraftIdData()
 {
-    if (!userAircraft_.isDefined()) {
+	log_.debug("requestUserAircraftData()");
+
+	if (!userAircraft_.isDefined()) {
+		log_.debug("requestUserAircraftData(): Setting up user aircraft data block");
+
 		userAircraft_.clear();
 		userAircraft_.add(DATAID_ATC_TYPE, "ATC TYPE", "", SIMCONNECT_DATATYPE_STRING256);
 		userAircraft_.add(DATAID_ATC_MODEL, "ATC MODEL", "", SIMCONNECT_DATATYPE_STRING256);
@@ -1780,12 +1797,14 @@ void SimConnectManager::requestUserAircraftIdData()
 			}
 			return true;
 		}, [=](int entryNr, int outOfNr, size_t size, const SimConnectDataDefinition* dataDef) {
+			log_.trace("requestUserAircraftData(): Aircraft data complete");
 			fireSimConnectEvent(SCE_AIRCRAFTLOADED);
 
 			return true;
 		});
     }
     requestSimDataOnce(userAircraft_);
+	log_.debug("requestUserAircraftData(): Done");
 }
 
 /*

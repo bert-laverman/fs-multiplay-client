@@ -1,0 +1,3 @@
+Computer\HKEY_CURRENT_USER\Software\Microsoft\Microsoft Games\Flight Simulator\10.0	AppPath
+Computer\HKEY_CURRENT_USER\Software\Microsoft\Microsoft Games\Flight Simulator - Steam Edition\10.0	AppPath
+Computer\HKEY_CURRENT_USER\Software\Lockheed Martin\Prepar3D v3 AppPath

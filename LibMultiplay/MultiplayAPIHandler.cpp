@@ -75,6 +75,7 @@ static const char * stateName[] = {
 
 MultiplayAPIHandler::MultiplayAPIHandler()
 	: client_(uri(L"http://localhost"))
+	, state_(APISTATE_INIT), serverStatus_(MPSTAT_DISCONNECTED)
 	, haveAircraft_(false)
 	, haveLocation_(false), locationUpdated_(false)
 	, haveEngines_(false), enginesUpdated_(false)
@@ -131,6 +132,37 @@ void MultiplayAPIHandler::stop()
 
 	log_.info("stopRunning(): Told worker to stop");
 }
+
+static MultiplayAPIHandler::MultiplayServerStatus state2serverState[] = {
+	MultiplayAPIHandler::MPSTAT_DISCONNECTED, // 0
+	MultiplayAPIHandler::MPSTAT_DISCONNECTED, // APISTATE_INIT,
+	MultiplayAPIHandler::MPSTAT_DISCONNECTED, // APISTATE_DISCONNECTED,
+	MultiplayAPIHandler::MPSTAT_CONNECTING, // APISTATE_DO_CONNECT,
+	MultiplayAPIHandler::MPSTAT_CONNECTING, // APISTATE_CONNECTING,
+	MultiplayAPIHandler::MPSTAT_ERROR, // APISTATE_CONNECT_FAILED,
+	MultiplayAPIHandler::MPSTAT_SYNC, // APISTATE_WAITING_FOR_AIRCRAFT_DATA,
+	MultiplayAPIHandler::MPSTAT_SYNC, // APISTATE_READY_TO_SEND_AIRCRAFT,
+	MultiplayAPIHandler::MPSTAT_SYNC, // APISTATE_AIRCRAFT_SENT,
+	MultiplayAPIHandler::MPSTAT_SYNC, // APISTATE_READY_TO_REQUEST_SESSION,
+	MultiplayAPIHandler::MPSTAT_SYNC, // APISTATE_REQUESTING_SESSION,
+	MultiplayAPIHandler::MPSTAT_SYNC, // APISTATE_READY_TO_REQUEST_SESSION_AIRCRAFT,
+	MultiplayAPIHandler::MPSTAT_SYNC, // APISTATE_REQUESTING_SESSION_AIRCRAFT,
+	MultiplayAPIHandler::MPSTAT_SYNC, // APISTATE_SESSION_LOADED,
+	MultiplayAPIHandler::MPSTAT_WS_CONNECTING, // APISTATE_DO_OPEN_WS,
+	MultiplayAPIHandler::MPSTAT_WS_CONNECTING, // APISTATE_WS_CONNECTING,
+	MultiplayAPIHandler::MPSTAT_WS_CONNECTING, // APISTATE_SEND_WS_HELLO,
+	MultiplayAPIHandler::MPSTAT_CONNECTED, // APISTATE_CONNECTED,
+	MultiplayAPIHandler::MPSTAT_CLOSING, // APISTATE_DO_DISCONNECT,
+	MultiplayAPIHandler::MPSTAT_CLOSING, // APISTATE_DO_CLOSE_WS,
+	MultiplayAPIHandler::MPSTAT_SYNC, // APISTATE_UNLOAD_SESSION,
+	MultiplayAPIHandler::MPSTAT_SYNC, // APISTATE_RESEND_AIRCRAFT,
+	MultiplayAPIHandler::MPSTAT_SYNC, // APISTATE_WAITING_FOR_NEW_AIRCRAFT_DATA,
+	MultiplayAPIHandler::MPSTAT_SYNC, // APISTATE_READY_TO_RESEND_AIRCRAFT,
+	MultiplayAPIHandler::MPSTAT_SYNC, // APISTATE_AIRCRAFT_RESENT,
+	MultiplayAPIHandler::MPSTAT_SYNC, // APISTATE_READY_TO_RELOAD_SESSION_AIRCRAFT,
+	MultiplayAPIHandler::MPSTAT_SYNC, // APISTATE_RELOADING_SESSION_AIRCRAFT,
+	MultiplayAPIHandler::MPSTAT_SYNC, // APISTATE_SESSION_RELOADED,
+};
 
 void MultiplayAPIHandler::run()
 {
@@ -246,6 +278,23 @@ void MultiplayAPIHandler::run()
 	}
 }
 
+/*
+ */
+void MultiplayAPIHandler::addServerStatusCallback(ServerStatusCallback cb)
+{
+	unique_lock<mutex> lock(statusCbLock_);
+	statusCallbacks_.emplace_back(cb);
+}
+
+void MultiplayAPIHandler::fireServerStatus()
+{
+	unique_lock<mutex> lock(statusCbLock_);
+
+	MultiplayServerStatus mpst(serverStatus_);
+	for (ServerStatusCallbackList::const_iterator it = statusCallbacks_.begin(); it != statusCallbacks_.end(); it++) {
+		(*it)(mpst);
+	}
+}
 
 /*
  */
@@ -254,14 +303,29 @@ void MultiplayAPIHandler::transition(ApiState newState)
 	log_.debug("transition(", stateName [newState], ")");
 	state_ = newState;
 	verhoog();
+
+	MultiplayServerStatus mpst = state2serverState[newState];
+	log_.debug("transition(): serverstatus=", serverStatus_, ", new=", newState);
+	if (serverStatus_ != mpst) {
+		serverStatus_ = mpst;
+		fireServerStatus();
+	}
 }
 
 void MultiplayAPIHandler::transition(ApiState currentState, ApiState newState)
 {
 	if (state_ == currentState) {
 		log_.debug("transition(", stateName [currentState], ", ", stateName [newState], ")");
+		MultiplayServerStatus mpst = state2serverState[newState];
+		log_.debug("transition(): serverstatus=", serverStatus_, ", new=", newState);
+
 		state_ = newState;
 		verhoog();
+
+		if (serverStatus_ != mpst) {
+			serverStatus_ = mpst;
+			fireServerStatus();
+		}
 	}
 }
 

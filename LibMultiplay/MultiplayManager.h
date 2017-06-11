@@ -74,11 +74,14 @@ namespace fsx {
 		DATAID_CONTROL_GEARS_HANDLE,
 	} AircraftControlsDataId;
 
+	typedef std::function<void()> MultiplayDataCallback;
+
 	class MultiplayManager
 		: public virtual nl::rakis::service::Service
 	{
 	public: // Types and constants
 		typedef std::chrono::system_clock::time_point Timestamp;
+		typedef std::vector<MultiplayDataCallback> MultiplayDataCallbackList;
 
 		static MultiplayManager& instance();
 
@@ -113,6 +116,7 @@ namespace fsx {
 		std::wstring callsign_;
 
 		MultiplayAPIHandler api_;
+		MultiplayDataCallbackList dataCallbacks_;
 
 		// When did we last...
 		bool needSendAircraft_;
@@ -135,6 +139,8 @@ namespace fsx {
 
 		void onLocalStatusUpdate();
 		void onLocalAircraftUpdate();
+
+		void fireDataChanged();
 
 		// FSX event handlers
 		void onFsxConnect();
@@ -160,24 +166,28 @@ namespace fsx {
 		bool isApiConnected() const { return apiConnected_; }
 		bool isWsConnected() const { return wsConnected_; }
 		const std::wstring& getServerUrl() const { return serverUrl_; }
-		void setServerUrl(const std::wstring& serverUrl) { serverUrl_ = serverUrl; }
+		void setServerUrl(const std::wstring& serverUrl) { serverUrl_ = serverUrl; fireDataChanged(); }
 		const std::wstring& getServerWsUrl() const { return serverWsUrl_; }
-		void setServerWsUrl(const std::wstring& serverWsUrl) { serverWsUrl_ = serverWsUrl; }
+		void setServerWsUrl(const std::wstring& serverWsUrl) { serverWsUrl_ = serverWsUrl; fireDataChanged(); }
 		const std::wstring& getUsername() const{ return username_; }
-		void setUsername(const std::wstring& username) { username_ = username; }
+		void setUsername(const std::wstring& username) { username_ = username; fireDataChanged(); }
 		const std::wstring& getPassword() const{ return password_; }
-		void setPassword(const std::wstring& password) { password_ = password; }
+		void setPassword(const std::wstring& password) { password_ = password; fireDataChanged(); }
 		const std::wstring& getSession() const{ return session_; }
-		void setSession(const std::wstring& session) { session_ = session; }
+		void setSession(const std::wstring& session) { session_ = session; fireDataChanged(); }
 		const std::wstring& getCallsign() const { return callsign_; }
-		void setCallsign(const std::wstring& callsign) { callsign_ = callsign; }
+		void setCallsign(const std::wstring& callsign) { callsign_ = callsign; fireDataChanged(); }
 		bool isCallsignOverride() const { return forceCallsign_; }
-		void setCallsignOverride(bool forceCallsign) { forceCallsign_ = forceCallsign; }
+		void setCallsignOverride(bool forceCallsign) { forceCallsign_ = forceCallsign; fireDataChanged(); }
 
 		// AIManager wants these
 		const FsxData& getLocationData() const { return aircraftLocationData_; }
 		const FsxData& getEngineData() const { return aircraftEngineData_; }
 		const FsxData& getControlsData() const { return aircraftControlsData_; }
+
+		//
+		inline void addServerStatusCallback(MultiplayAPIHandler::ServerStatusCallback cb) { api_.addServerStatusCallback(cb); }
+		void addDataCallback(MultiplayDataCallback cb) { dataCallbacks_.emplace_back(cb); }
 
 	private:
 		MultiplayManager(MultiplayManager const&) = delete;

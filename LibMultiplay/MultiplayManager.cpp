@@ -225,6 +225,12 @@ void MultiplayManager::onLocalAircraftUpdate()
 	log_.debug("onLocalAircraftUpdate(): Done");
 }
 
+void MultiplayManager::fireDataChanged()
+{
+	for (MultiplayDataCallbackList::const_iterator it = dataCallbacks_.begin(); it != dataCallbacks_.end(); it++) {
+		(*it)();
+	}
+}
 
 static void getValue(string& s, const void* data, const SimConnectData& dataDef)
 {

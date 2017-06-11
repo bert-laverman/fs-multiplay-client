@@ -53,6 +53,18 @@ public: // Types and constants
 		APISTATE_SESSION_RELOADED,
 	};
 
+	enum MultiplayServerStatus {
+		MPSTAT_DISCONNECTED = 1,
+		MPSTAT_CONNECTING,
+		MPSTAT_WS_CONNECTING,
+		MPSTAT_CONNECTED,
+		MPSTAT_CLOSING,
+		MPSTAT_SYNC,
+		MPSTAT_ERROR,
+	};
+	typedef std::function<void(MultiplayServerStatus status)> ServerStatusCallback;
+	typedef std::vector<ServerStatusCallback> ServerStatusCallbackList;
+
 	struct MultiplaySession {
 		std::wstring name;
 		std::wstring description;
@@ -75,32 +87,36 @@ private: // Members
 
 	std::wstring token_;
 
-	ApiState state_;
+	ApiState                 state_;
+	MultiplayServerStatus    serverStatus_;
 
-	std::thread             apiThread_;
-	std::atomic<bool>       stopRunning_;
-	std::mutex              runLock_;
-	std::condition_variable runCv_;
-	std::atomic<unsigned>   sem_;
+	ServerStatusCallbackList statusCallbacks_;
+	std::mutex               statusCbLock_;
 
-	bool                    haveAircraft_;
-	bool                    aircraftUpdated_;
-	AircraftIdData          aircraft_;
-	bool                    haveLocation_;
-	bool                    locationUpdated_;
-	AircraftLocationData    location_;
-	bool                    haveEngines_;
-	bool                    enginesUpdated_;
-	AircraftEngineData      engines_;
-	bool                    haveLights_;
-	bool                    lightsUpdated_;
-	AircraftLightsData      lights_;
-	bool                    haveControls_;
-	bool                    controlsUpdated_;
-	AircraftControlsData    controls_;
+	std::thread              apiThread_;
+	std::atomic<bool>        stopRunning_;
+	std::mutex               runLock_;
+	std::condition_variable  runCv_;
+	std::atomic<unsigned>    sem_;
 
-	MultiplaySession        session_;
-	StringVector            callsignsToLoad_;
+	bool                     haveAircraft_;
+	bool                     aircraftUpdated_;
+	AircraftIdData           aircraft_;
+	bool                     haveLocation_;
+	bool                     locationUpdated_;
+	AircraftLocationData     location_;
+	bool                     haveEngines_;
+	bool                     enginesUpdated_;
+	AircraftEngineData       engines_;
+	bool                     haveLights_;
+	bool                     lightsUpdated_;
+	AircraftLightsData       lights_;
+	bool                     haveControls_;
+	bool                     controlsUpdated_;
+	AircraftControlsData     controls_;
+
+	MultiplaySession         session_;
+	StringVector             callsignsToLoad_;
 
 	static Logger log_;
 	static Logger dataInLog_;
@@ -132,6 +148,7 @@ private: // Members
 	void doSendLights();
 	void doSendControls();
 
+	void fireServerStatus();
 	void transition(ApiState newState);
 	void transition(ApiState currentState, ApiState newState);
 
@@ -174,6 +191,8 @@ public: // Methods
 
 	bool isLoggedIn() const { return (state_ == APISTATE_CONNECTED); }
 	const std::wstring& getToken() const { return token_; }
+
+	void addServerStatusCallback(ServerStatusCallback cb);
 };
 
 } // namespace fsx
